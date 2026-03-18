@@ -1,0 +1,23 @@
+{
+  "category": "workflow",
+  "description": "工作流相关偏好 - 如何执行任务的规则",
+  "preferences": [
+    {
+      "id": "pref-001",
+      "rule": "avoid_manual_document_copy",
+      "description": "永远不要让用户手动复制文档内容",
+      "severity": "critical",
+      "triggers": ["文档", "复制", "手动"],
+      "appliedInScenarios": [
+        "整理文档",
+        "获取文档内容",
+        "文档格式转换"
+      ],
+      "alternativeActions": [
+        "使用 feishu-fetch-doc skill 获取文档",
+        "使用 API 直接读取内容",
+        "使用自动化工具提取内容"
+      ]
+    }
+  ]
+}

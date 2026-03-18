@@ -1,0 +1,23 @@
+{
+  "category": "communication",
+  "description": "沟通相关偏好 - 如何与用户交互的规则",
+  "preferences": [
+    {
+      "id": "pref-002",
+      "rule": "avoid_repetition",
+      "description": "避免让用户重复讲解同一件事",
+      "severity": "high",
+      "triggers": ["重复", "又", "再次"],
+      "appliedInScenarios": [
+        "用户表达偏好",
+        "用户纠正行为",
+        "用户提供规则"
+      ],
+      "behaviorGuidelines": [
+        "主动记住用户表达过的偏好",
+        "在相关任务中自动应用这些偏好",
+        "在回复开头明确声明正在应用的偏好"
+      ]
+    }
+  ]
+}

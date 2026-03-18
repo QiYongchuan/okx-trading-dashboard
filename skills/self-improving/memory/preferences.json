@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-03-17T11:09:00Z",
+  "preferences": [
+    {
+      "id": "pref-001",
+      "category": "workflow",
+      "rule": "avoid_manual_document_copy",
+      "description": "永远不要让用户手动复制文档内容",
+      "severity": "critical",
+      "triggers": ["文档", "复制", "手动"],
+      "createdAt": "2026-03-17T11:09:00Z",
+      "source": "用户明确表达：'不要让我手动复制文档工作，永远不要'",
+      "appliedCount": 0,
+      "lastApplied": null
+    },
+    {
+      "id": "pref-002",
+      "category": "communication",
+      "rule": "avoid_repetition",
+      "description": "避免让用户重复讲解同一件事",
+      "severity": "high",
+      "triggers": ["重复", "又", "再次"],
+      "createdAt": "2026-03-17T11:10:00Z",
+      "source": "用户表达：'下次不要让我重复讲这个'",
+      "appliedCount": 0,
+      "lastApplied": null
+    }
+  ],
+  "metadata": {
+    "totalPreferences": 2,
+    "criticalCount": 1,
+    "highCount": 1
+  }
+}

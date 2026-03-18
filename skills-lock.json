@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "opencli": {
+      "source": "joeseesun/opencli-skill",
+      "sourceType": "github",
+      "computedHash": "8593fd00785b896ec8f9b15adb3d82bcc01cb605b426ac3e76db86135898dd11"
+    }
+  }
+}
