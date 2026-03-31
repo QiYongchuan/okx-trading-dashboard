@@ -1,66 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { generateReflection } from '@/lib/claude'
-import { Trade } from '@/types/trade'
+import { NextResponse } from "next/server";
+import { generateReflection } from "@/lib/claude";
+import type { Trade } from "@/types/trade";
 
-export async function POST(request: NextRequest) {
-  try {
-    // 检查 API Key 是否配置
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: 'ANTHROPIC_API_KEY not configured' },
-        { status: 500 }
-      )
-    }
-
-    // 解析请求体
-    const body = await request.json()
-    const trade: Trade = body.trade
-
-    if (!trade) {
-      return NextResponse.json({ error: 'Trade data is required' }, { status: 400 })
-    }
-
-    // 验证必要字段
-    if (!trade.id || !trade.symbol || !trade.side || !trade.price) {
-      return NextResponse.json(
-        { error: 'Missing required trade fields' },
-        { status: 400 }
-      )
-    }
-
-    // 生成复盘分析
-    const reflection = await generateReflection(trade)
-
-    return NextResponse.json({
-      success: true,
-      reflection,
-    })
-  } catch (error) {
-    console.error('Error in /api/reflection:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to generate reflection',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+function isTrade(input: unknown): input is Trade {
+  if (!input || typeof input !== "object") {
+    return false;
   }
+
+  const trade = input as Record<string, unknown>;
+
+  return (
+    typeof trade.id === "string" &&
+    typeof trade.symbol === "string" &&
+    (trade.side === "buy" || trade.side === "sell") &&
+    typeof trade.price === "number" &&
+    typeof trade.quantity === "number" &&
+    typeof trade.timestamp === "string" &&
+    typeof trade.strategy === "string" &&
+    (trade.pnl === undefined || typeof trade.pnl === "number")
+  );
 }
 
-// GET 方法用于获取历史复盘记录
-export async function GET(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // 这里可以从数据库或文件系统读取历史复盘记录
-    // 目前返回空数组作为占位
-    return NextResponse.json({
-      success: true,
-      reflections: [],
-    })
+    const body = (await request.json()) as unknown;
+
+    if (!isTrade(body)) {
+      return NextResponse.json(
+        { error: "交易数据格式无效，请检查请求参数。" },
+        { status: 400 },
+      );
+    }
+
+    const reflection = await generateReflection(body);
+    return NextResponse.json(reflection);
   } catch (error) {
-    console.error('Error fetching reflections:', error)
+    const message =
+      error instanceof Error && error.message === "Missing ANTHROPIC_API_KEY"
+        ? "服务端缺少 ANTHROPIC_API_KEY，无法调用 Claude API。"
+        : "AI 复盘生成失败，请稍后重试。";
+
     return NextResponse.json(
-      { error: 'Failed to fetch reflections' },
-      { status: 500 }
-    )
+      {
+        error: message,
+        details: error instanceof Error ? error.message : "unknown_error",
+      },
+      { status: 500 },
+    );
   }
 }

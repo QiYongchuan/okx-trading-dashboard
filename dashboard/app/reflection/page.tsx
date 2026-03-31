@@ -1,269 +1,247 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Trade, ReflectionResult } from '@/types/trade'
+import { useState } from "react";
+import type { ReflectionResult, Trade } from "@/types/trade";
 
-// 模拟交易数据（实际应从 OKX API 获取）
 const mockTrades: Trade[] = [
   {
-    id: '1',
-    symbol: 'BTC-USDT',
-    side: 'buy',
-    price: 67500,
-    quantity: 0.01,
-    timestamp: '2026-03-31T08:00:00Z',
-    strategy: '网格交易 #1',
-    pnl: 50,
+    id: "trade-001",
+    symbol: "BTC-USDT-SWAP",
+    side: "buy",
+    price: 68450,
+    quantity: 0.25,
+    timestamp: "2026-03-31T09:15:00Z",
+    strategy: "15m 突破回踩做多",
+    pnl: 235.5,
   },
   {
-    id: '2',
-    symbol: 'ETH-USDT',
-    side: 'sell',
-    price: 2050,
-    quantity: 0.5,
-    timestamp: '2026-03-31T10:30:00Z',
-    strategy: '网格交易 #2',
-    pnl: -15,
+    id: "trade-002",
+    symbol: "ETH-USDT-SWAP",
+    side: "sell",
+    price: 3520,
+    quantity: 1.5,
+    timestamp: "2026-03-30T18:40:00Z",
+    strategy: "日内阻力位反转做空",
+    pnl: -128.4,
   },
   {
-    id: '3',
-    symbol: 'OKB-USDT',
-    side: 'buy',
-    price: 48.5,
-    quantity: 10,
-    timestamp: '2026-03-31T12:15:00Z',
-    strategy: '网格交易 #3',
-    pnl: 5,
+    id: "trade-003",
+    symbol: "SOL-USDT-SWAP",
+    side: "buy",
+    price: 188.6,
+    quantity: 18,
+    timestamp: "2026-03-29T13:05:00Z",
+    strategy: "趋势延续加仓",
+    pnl: 96.8,
   },
-]
+];
 
 export default function ReflectionPage() {
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
-  const [reflection, setReflection] = useState<ReflectionResult | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(mockTrades[0]);
+  const [result, setResult] = useState<ReflectionResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // 生成复盘分析
-  const handleGenerateReflection = async (trade: Trade) => {
-    setSelectedTrade(trade)
-    setLoading(true)
-    setError(null)
-    setReflection(null)
+  async function handleReflect(trade: Trade) {
+    setSelectedTrade(trade);
+    setLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('/api/reflection', {
-        method: 'POST',
+      const response = await fetch("/api/reflection", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ trade }),
-      })
+        body: JSON.stringify(trade),
+      });
 
-      const data = await response.json()
+      const data = (await response.json()) as ReflectionResult & { error?: string };
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate reflection')
+        throw new Error(data.error || "AI 复盘生成失败");
       }
 
-      setReflection(data.reflection)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setResult(data);
+    } catch (requestError) {
+      setResult(null);
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "请求失败，请检查网络或稍后重试。",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-          AI 交易复盘
-        </h1>
-
-        {/* 说明卡片 */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            💡 点击交易记录右侧的「AI 复盘」按钮，让 Claude 分析该笔交易的决策依据、市场状态和可复用经验。
+    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <div className="rounded-[28px] border border-white/10 bg-[var(--panel)] p-6 shadow-2xl shadow-slate-950/30 backdrop-blur">
+          <p className="text-sm uppercase tracking-[0.28em] text-cyan-200/80">
+            Reflection Center
           </p>
+          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold text-white md:text-4xl">
+                AI 自动复盘
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                选择一笔交易，系统会调用 Claude 生成结构化交易复盘，帮助你复核判断逻辑与策略偏差。
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* 交易列表 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              近期交易
-            </h2>
-          </div>
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {mockTrades.map((trade) => (
-              <div
-                key={trade.id}
-                className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {trade.symbol}
-                      </span>
+        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <section className="rounded-[28px] border border-white/10 bg-[var(--panel)] p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">交易列表</h2>
+              <span className="text-xs text-slate-400">{mockTrades.length} trades</span>
+            </div>
+
+            <div className="space-y-3">
+              {mockTrades.map((trade) => {
+                const active = trade.id === selectedTrade?.id;
+                const pnlPositive = (trade.pnl ?? 0) >= 0;
+
+                return (
+                  <button
+                    key={trade.id}
+                    type="button"
+                    onClick={() => handleReflect(trade)}
+                    className={`w-full rounded-2xl border p-4 text-left transition ${
+                      active
+                        ? "border-cyan-300/60 bg-cyan-400/10"
+                        : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-white">{trade.symbol}</p>
+                        <p className="mt-1 text-sm text-slate-400">{trade.strategy}</p>
+                      </div>
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded ${
-                          trade.side === 'buy'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          trade.side === "buy"
+                            ? "bg-emerald-400/15 text-emerald-200"
+                            : "bg-rose-400/15 text-rose-200"
                         }`}
                       >
-                        {trade.side === 'buy' ? '买入' : '卖出'}
+                        {trade.side.toUpperCase()}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-400">
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4">
                       <div>
-                        <span className="text-gray-500 dark:text-gray-500">价格：</span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          ${trade.price.toLocaleString()}
-                        </span>
+                        <p className="text-xs text-slate-500">Price</p>
+                        <p>{trade.price}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500 dark:text-gray-500">数量：</span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {trade.quantity}
-                        </span>
+                        <p className="text-xs text-slate-500">Qty</p>
+                        <p>{trade.quantity}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500 dark:text-gray-500">策略：</span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {trade.strategy}
-                        </span>
+                        <p className="text-xs text-slate-500">PnL</p>
+                        <p className={pnlPositive ? "text-emerald-300" : "text-rose-300"}>
+                          {trade.pnl}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-gray-500 dark:text-gray-500">盈亏：</span>
-                        <span
-                          className={`font-medium ${
-                            trade.pnl && trade.pnl > 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
-                          }`}
-                        >
-                          {trade.pnl ? `$${trade.pnl > 0 ? '+' : ''}${trade.pnl}` : '-'}
-                        </span>
+                        <p className="text-xs text-slate-500">Time</p>
+                        <p>{new Date(trade.timestamp).toLocaleString("zh-CN")}</p>
                       </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => handleGenerateReflection(trade)}
-                    disabled={loading && selectedTrade?.id === trade.id}
-                    className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium"
-                  >
-                    {loading && selectedTrade?.id === trade.id ? (
-                      <span className="flex items-center gap-2">
-                        <svg
-                          className="animate-spin h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        分析中...
-                      </span>
-                    ) : (
-                      'AI 复盘'
-                    )}
                   </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 错误提示 */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-sm text-red-800 dark:text-red-200">
-              ❌ {error}
-              {error.includes('ANTHROPIC_API_KEY') && (
-                <span className="block mt-2">
-                  请在 `.env.local` 文件中配置 `ANTHROPIC_API_KEY`
-                </span>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* 复盘结果 */}
-        {reflection && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span className="text-2xl">🤖</span>
-                AI 复盘分析
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-normal ml-2">
-                  {selectedTrade?.symbol} - {selectedTrade?.side === 'buy' ? '买入' : '卖出'}
-                </span>
-              </h2>
+                );
+              })}
             </div>
-            <div className="p-6 space-y-6">
-              {/* 完整分析 */}
+          </section>
+
+          <section className="rounded-[28px] border border-white/10 bg-[var(--panel)] p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  📊 交易分析
-                </h3>
-                <p className="text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap">
-                  {reflection.analysis}
+                <h2 className="text-lg font-semibold text-white">复盘结果</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  {selectedTrade ? `当前交易：${selectedTrade.symbol}` : "请选择一笔交易"}
                 </p>
               </div>
-
-              {/* 关键学习点 */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  💡 关键学习点
-                </h3>
-                <ul className="space-y-2">
-                  {reflection.keyLearnings.map((learning, index) => (
-                    <li key={index} className="flex items-start gap-2 text-gray-900 dark:text-white">
-                      <span className="text-blue-500 mt-1">•</span>
-                      <span>{learning}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* 策略建议 */}
-              {reflection.suggestedStrategy && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    🎯 策略建议
-                  </h3>
-                  <p className="text-gray-900 dark:text-white bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
-                    {reflection.suggestedStrategy}
-                  </p>
-                </div>
-              )}
-
-              {/* 风险评估 */}
-              {reflection.riskAssessment && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    ⚠️ 风险评估
-                  </h3>
-                  <p className="text-gray-900 dark:text-white">{reflection.riskAssessment}</p>
-                </div>
-              )}
+              {loading ? (
+                <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-medium text-cyan-100">
+                  Claude 正在分析...
+                </span>
+              ) : null}
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+
+            <div className="mt-6 min-h-[420px] rounded-[24px] border border-white/10 bg-[var(--panel-strong)] p-5">
+              {error ? (
+                <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-100">
+                  {error}
+                </div>
+              ) : null}
+
+              {!error && !result && !loading ? (
+                <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-slate-400">
+                  点击左侧交易卡片，生成 AI 自动复盘。
+                </div>
+              ) : null}
+
+              {loading ? (
+                <div className="space-y-4">
+                  <div className="h-5 w-2/5 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-4 w-full animate-pulse rounded-full bg-white/8" />
+                  <div className="h-4 w-11/12 animate-pulse rounded-full bg-white/8" />
+                  <div className="h-4 w-10/12 animate-pulse rounded-full bg-white/8" />
+                  <div className="mt-8 h-4 w-1/3 animate-pulse rounded-full bg-white/8" />
+                  <div className="h-4 w-4/5 animate-pulse rounded-full bg-white/8" />
+                  <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/8" />
+                </div>
+              ) : null}
+
+              {!loading && result ? (
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/80">
+                      Analysis
+                    </p>
+                    <article className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-100">
+                      {result.analysis}
+                    </article>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/80">
+                      Key Learnings
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {result.keyLearnings.map((item) => (
+                        <span
+                          key={item}
+                          className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-50"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {result.suggestedStrategy ? (
+                    <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-emerald-100/80">
+                        Suggested Strategy
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-emerald-50">
+                        {result.suggestedStrategy}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  );
 }
