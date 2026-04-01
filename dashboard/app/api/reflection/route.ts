@@ -36,8 +36,8 @@ export async function POST(request: Request) {
     return NextResponse.json(reflection);
   } catch (error) {
     const message =
-      error instanceof Error && error.message === "Missing ANTHROPIC_API_KEY"
-        ? "服务端缺少 ANTHROPIC_API_KEY，无法调用 Claude API。"
+      error instanceof Error && error.message === "Missing GLM_API_KEY"
+        ? "服务端缺少 GLM_API_KEY，无法调用 GLM API。"
         : "AI 复盘生成失败，请稍后重试。";
 
     return NextResponse.json(

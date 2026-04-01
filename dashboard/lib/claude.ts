@@ -1,17 +1,8 @@
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
 import type { ReflectionResult, Trade } from "@/types/trade";
 
-const MODEL_NAME = "claude-3-5-sonnet-latest";
-
-function extractTextBlock(content: Array<{ type: string; text?: string }>) {
-  return content
-    .filter((block) => block.type === "text" && typeof block.text === "string")
-    .map((block) => block.text ?? "")
-    .join("\n")
-    .trim();
-}
+const MODEL_NAME = "glm-4-plus";
 
 function parseReflectionResult(rawText: string): ReflectionResult {
   const trimmed = rawText.trim();
@@ -19,20 +10,18 @@ function parseReflectionResult(rawText: string): ReflectionResult {
   const jsonEnd = trimmed.lastIndexOf("}");
 
   if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
-    throw new Error("Claude returned invalid JSON");
+    throw new Error("GLM returned invalid JSON");
   }
 
   return JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1)) as ReflectionResult;
 }
 
 export async function generateReflection(trade: Trade): Promise<ReflectionResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GLM_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Missing ANTHROPIC_API_KEY");
+    throw new Error("Missing GLM_API_KEY");
   }
-
-  const anthropic = new Anthropic({ apiKey });
 
   const prompt = `
 你是专业的交易复盘助手。请基于以下交易数据，使用中文输出严格 JSON，不要输出 Markdown 代码块。
@@ -64,22 +53,34 @@ export async function generateReflection(trade: Trade): Promise<ReflectionResult
 }
 `;
 
-  const response = await anthropic.messages.create({
-    model: MODEL_NAME,
-    max_tokens: 900,
-    temperature: 0.4,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
+  const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: MODEL_NAME,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.4,
+      max_tokens: 900,
+    }),
   });
 
-  const rawText = extractTextBlock(response.content as Array<{ type: string; text?: string }>);
+  if (!response.ok) {
+    throw new Error(`GLM API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const rawText = data.choices?.[0]?.message?.content;
 
   if (!rawText) {
-    throw new Error("Claude returned an empty response");
+    throw new Error("GLM returned an empty response");
   }
 
   try {
@@ -92,6 +93,6 @@ export async function generateReflection(trade: Trade): Promise<ReflectionResult
       suggestedStrategy: parsed.suggestedStrategy,
     };
   } catch {
-    throw new Error("Claude returned invalid JSON");
+    throw new Error("GLM returned invalid JSON");
   }
 }
