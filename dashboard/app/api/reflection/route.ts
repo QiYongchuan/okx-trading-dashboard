@@ -4,10 +4,15 @@ import path from "path";
 
 const OBSIDIAN_PATH = "D:/obsidian/06-项目管理/运行项目/okx-交易-黑暗森林";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    // Fetch trades data - 使用相对路径（同域请求）
-    const tradesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/trades`);
+    // 构建绝对 URL
+    const protocol = process.env.VERCEL_URL ? 'https' : 'http';
+    const host = req.headers.get('host') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+    
+    // Fetch trades data
+    const tradesRes = await fetch(`${baseUrl}/api/trades`);
     
     if (!tradesRes.ok) {
       throw new Error(`Trades API failed: ${tradesRes.status}`);
