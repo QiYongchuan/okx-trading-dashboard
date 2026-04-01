@@ -2,7 +2,7 @@ import "server-only";
 
 import type { ReflectionResult, Trade } from "@/types/trade";
 
-const MODEL_NAME = "glm-4-plus";
+const MODEL_NAME = "ep-mfqrk6-1773650127789062917";
 
 function parseReflectionResult(rawText: string): ReflectionResult {
   const trimmed = rawText.trim();
@@ -53,7 +53,9 @@ export async function generateReflection(trade: Trade): Promise<ReflectionResult
 }
 `;
 
-  const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
+  const baseUrl = process.env.GLM_BASE_URL || "https://wanqing.streamlakeapi.com/api/gateway/v1/endpoints";
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
