@@ -1,111 +1,253 @@
-import Link from 'next/link'
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+type Balance = { ccy: string; bal: string; availBal: string };
+type GridBot = any;
+type Ticker = any;
+
+type Data = {
+  balance: Balance[];
+  gridBots: GridBot[];
+  tickers: { "BTC-USDT": Ticker; "ETH-USDT": Ticker; "OKB-USDT": Ticker };
+  timestamp: string;
+};
+
+export default function Dashboard() {
+  const [data, setData] = useState<Data | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date>();
+
+  useEffect(() => {
+    const loadData = async () => {
+      const res = await fetch("/api/okx");
+      const json = await res.json();
+      setData(json);
+      setLastUpdate(new Date());
+      setLoading(false);
+    };
+    loadData();
+    const interval = setInterval(loadData, 10000); // 10秒刷新
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    );
+  }
+
+  const getBalance = (ccy: string) => {
+    const b = data?.balance.find((b) => b.ccy === ccy);
+    return {
+      total: parseFloat(b?.bal || "0"),
+      available: parseFloat(b?.availBal || "0"),
+      frozen: parseFloat(b?.bal || "0") - parseFloat(b?.availBal || "0"),
+    };
+  };
+
+  const usdt = getBalance("USDT");
+  const btc = getBalance("BTC");
+  const eth = getBalance("ETH");
+  const okb = getBalance("OKB");
+
+  const btcPrice = parseFloat(data?.tickers["BTC-USDT"]?.last || "0");
+  const ethPrice = parseFloat(data?.tickers["ETH-USDT"]?.last || "0");
+  const okbPrice = parseFloat(data?.tickers["OKB-USDT"]?.last || "0");
+
+  const totalValue =
+    usdt.total +
+    btc.total * btcPrice +
+    eth.total * ethPrice +
+    okb.total * okbPrice;
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-16">
-        {/* 头部 */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            OKX AI 交易系统
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            让 AI 从每次交易中学习，持续优化交易策略
-          </p>
-        </div>
-
-        {/* 功能卡片 */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              模拟盘交易
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              OKX 模拟账户实时运行，积累交易数据
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#1e1e2e] pb-4">
+          <div>
+            <h1 className="text-2xl font-bold">OKX 模拟盘</h1>
+            <p className="text-[#8888a0] text-sm">
+              自动刷新 • {lastUpdate?.toLocaleTimeString()}
             </p>
           </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-2 border-blue-500">
-            <div className="text-4xl mb-4">🤖</div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              AI 自动复盘
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              每笔交易后 Claude 自动分析，提取经验教训
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              策略优化
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              从复盘中提取可复用规则，持续进化
-            </p>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/trades"
+              className="px-4 py-2 bg-[#12121a] border border-[#1e1e2e] rounded-lg hover:border-[#3b82f6] transition-colors text-sm"
+            >
+              交易记录
+            </Link>
+            <Link
+              href="/reflection"
+              className="px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] rounded-lg text-white text-sm transition-colors"
+            >
+              复盘报告
+            </Link>
           </div>
         </div>
 
-        {/* CTA 按钮 */}
-        <div className="flex justify-center gap-4">
-          <Link
-            href="/reflection"
-            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-lg hover:shadow-xl"
-          >
-            开始 AI 复盘 →
-          </Link>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-8 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition-colors"
-          >
-            GitHub
-          </a>
-        </div>
-
-        {/* 系统状态 */}
-        <div className="mt-16 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            系统状态
-          </h2>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                  3
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">运行策略</div>
+        {/* Account Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { ccy: "BTC", bal: btc, price: btcPrice },
+            { ccy: "ETH", bal: eth, price: ethPrice },
+            { ccy: "OKB", bal: okb, price: okbPrice },
+            { ccy: "USDT", bal: usdt, price: 1 },
+          ].map((item) => (
+            <div
+              key={item.ccy}
+              className="bg-[#12121a] border border-[#1e1e2e] rounded-lg p-4 hover:border-[#3b82f6] transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[#8888a0]">{item.ccy}</span>
+                <span className="text-xs px-2 py-1 bg-[#1e1e2e] rounded">
+                  ${item.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
-                  0
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">累计交易</div>
+              <div className="text-2xl font-bold mt-2">{item.bal.total.toFixed(4)}</div>
+              <div className="text-[#8888a0] text-sm">
+                可用: {item.bal.available.toFixed(4)} {item.bal.frozen > 0 && `| 冻结: ${item.bal.frozen.toFixed(4)}`}
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                  0
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">AI 复盘</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                  0
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">提取策略</div>
+              <div className="text-[#00d4aa] text-sm mt-1">
+                ≈ ${(item.bal.total * item.price).toFixed(2)}
               </div>
             </div>
+          ))}
+        </div>
+
+        {/* Grid Bots */}
+        <div className="bg-[#12121a] border border-[#1e1e2e] rounded-lg">
+          <div className="p-4 border-b border-[#1e1e2e] flex items-center gap-2">
+            <span className="text-2xl">🤖</span>
+            <h2 className="font-bold">运行中的策略</h2>
+            <span className="text-[#8888a0] text-sm">
+              ({data?.gridBots?.length || 0})
+            </span>
+          </div>
+          <div className="divide-y divide-[#1e1e2e]">
+            {data?.gridBots?.map((bot: any) => (
+              <div key={bot.algoId} className="p-4 hover:bg-[#1a1a25] transition-colors">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="font-bold">
+                      网格 Bot #{bot.algoId.slice(-6)}
+                    </div>
+                    <div className="text-[#8888a0] text-sm">{bot.instId}</div>
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className={`font-bold ${
+                        parseFloat(bot.detail?.totalPnl || "0") >= 0
+                          ? "text-[#00d4aa]"
+                          : "text-[#ff4466]"
+                      }`}
+                    >
+                      {parseFloat(bot.detail?.totalPnl || "0") >= 0 ? "+" : ""}
+                      {parseFloat(bot.detail?.totalPnl || "0").toFixed(4)} USDT
+                    </div>
+                    <div className="text-[#8888a0] text-sm">
+                      成交: {bot.detail?.tradeNum || "0"} 笔 | 利润: {bot.detail?.gridProfit || "0"}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-[#8888a0]">
+                    区间: {parseFloat(bot.minPx).toLocaleString()} -{" "}
+                    {parseFloat(bot.maxPx).toLocaleString()}
+                  </span>
+                  <span className="text-[#8888a0]">
+                    {bot.gridNum} 格
+                  </span>
+                  <span className="px-2 py-1 bg-[#00d4aa]/20 text-[#00d4aa] rounded text-xs">
+                    运行中
+                  </span>
+                </div>
+                {/* Grid visualization */}
+                <div className="mt-3 h-8 relative">
+                  <div className="absolute inset-x-0 top-1/2 h-px bg-[#1e1e2e]" />
+                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between">
+                    {Array.from({ length: Math.min(10, bot.gridNum) }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-2 h-2 rounded-full ${
+                          i < Math.floor((bot.detail?.gridProfits || 0) / bot.gridNum * 10)
+                            ? "bg-[#00d4aa]"
+                            : "bg-[#1e1e2e]"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  {(() => {
+                    const currentPrice = bot.instId === "BTC-USDT" ? btcPrice :
+                                       bot.instId === "ETH-USDT" ? ethPrice :
+                                       bot.instId === "OKB-USDT" ? okbPrice : 0;
+                    const minPx = parseFloat(bot.minPx);
+                    const maxPx = parseFloat(bot.maxPx);
+                    const position = Math.max(0, Math.min(100, ((currentPrice - minPx) / (maxPx - minPx)) * 100));
+                    return currentPrice > 0 ? (
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[#3b82f6] rounded-full"
+                        style={{ left: `${position}%` }}
+                        title={`当前价格: ${currentPrice.toFixed(2)}`}
+                      />
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            ))}
+            {(!data?.gridBots || data.gridBots.length === 0) && (
+              <div className="p-8 text-center text-[#8888a0]">暂无运行中的策略</div>
+            )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-16 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Powered by Next.js + Claude AI + OKX API</p>
-          <p className="mt-2">© 2026 OKX AI Trading System</p>
+        {/* Grid Bot Trades Summary */}
+        <div className="bg-[#12121a] border border-[#1e1e2e] rounded-lg">
+          <div className="p-4 border-b border-[#1e1e2e] flex items-center gap-2">
+            <span className="text-2xl">📋</span>
+            <h2 className="font-bold">策略成交统计</h2>
+          </div>
+          <div className="divide-y divide-[#1e1e2e]">
+            {data?.gridBots?.map((bot: any) => (
+              <div key={bot.algoId} className="p-4 flex items-center justify-between hover:bg-[#1a1a25]">
+                <div>
+                  <span className="font-medium">{bot.instId}</span>
+                  <span className="text-[#8888a0] text-sm ml-2">
+                    #{bot.algoId.slice(-4)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <div>
+                    <span className="text-[#8888a0]">成交: </span>
+                    <span className="font-bold">{bot.detail?.tradeNum || "0"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#8888a0]">利润: </span>
+                    <span className={`font-bold ${
+                      parseFloat(bot.detail?.totalPnl || "0") >= 0 ? "text-[#00d4aa]" : "text-[#ff4466]"
+                    }`}>
+                      {parseFloat(bot.detail?.totalPnl || "0") >= 0 ? "+" : ""}
+                      {parseFloat(bot.detail?.totalPnl || "0").toFixed(4)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#8888a0]">投入: </span>
+                    <span>{bot.investment || "0"} USDT</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(!data?.gridBots || data.gridBots.length === 0) && (
+              <div className="p-8 text-center text-[#8888a0]">暂无运行中的策略</div>
+            )}
+          </div>
         </div>
       </div>
-    </main>
-  )
+    </div>
+  );
 }
