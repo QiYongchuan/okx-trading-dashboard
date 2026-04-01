@@ -4,16 +4,48 @@ import type { ReflectionResult, Trade } from "@/types/trade";
 
 const MODEL_NAME = "ep-mfqrk6-1773650127789062917";
 
-function parseReflectionResult(rawText: string): ReflectionResult {
+function normalizeKeyLearnings(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .map((line) => line.replace(/^[\s\-*•\d.)]+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function buildFallbackReflection(rawText: string, tradeId: string): ReflectionResult {
+  const analysis = rawText.trim() || "AI 未返回可用内容。";
+
+  return {
+    tradeId,
+    analysis,
+    keyLearnings: normalizeKeyLearnings(rawText),
+  };
+}
+
+function parseReflectionResult(rawText: string, tradeId: string): ReflectionResult {
   const trimmed = rawText.trim();
   const jsonStart = trimmed.indexOf("{");
   const jsonEnd = trimmed.lastIndexOf("}");
 
   if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
-    throw new Error("GLM returned invalid JSON");
+    return buildFallbackReflection(trimmed, tradeId);
   }
 
-  return JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1)) as ReflectionResult;
+  try {
+    const parsed = JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1)) as ReflectionResult;
+
+    return {
+      tradeId: parsed.tradeId || tradeId,
+      analysis: typeof parsed.analysis === "string" ? parsed.analysis : trimmed,
+      keyLearnings: Array.isArray(parsed.keyLearnings)
+        ? parsed.keyLearnings.filter((item): item is string => typeof item === "string")
+        : normalizeKeyLearnings(typeof parsed.analysis === "string" ? parsed.analysis : trimmed),
+      suggestedStrategy:
+        typeof parsed.suggestedStrategy === "string" ? parsed.suggestedStrategy : undefined,
+    };
+  } catch {
+    return buildFallbackReflection(trimmed, tradeId);
+  }
 }
 
 export async function generateReflection(trade: Trade): Promise<ReflectionResult> {
@@ -85,16 +117,5 @@ export async function generateReflection(trade: Trade): Promise<ReflectionResult
     throw new Error("GLM returned an empty response");
   }
 
-  try {
-    const parsed = parseReflectionResult(rawText);
-
-    return {
-      tradeId: parsed.tradeId || trade.id,
-      analysis: parsed.analysis,
-      keyLearnings: Array.isArray(parsed.keyLearnings) ? parsed.keyLearnings : [],
-      suggestedStrategy: parsed.suggestedStrategy,
-    };
-  } catch {
-    throw new Error("GLM returned invalid JSON");
-  }
+  return parseReflectionResult(rawText, trade.id);
 }

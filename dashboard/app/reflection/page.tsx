@@ -37,7 +37,7 @@ const mockTrades: Trade[] = [
 ];
 
 export default function ReflectionPage() {
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(mockTrades[0]);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [result, setResult] = useState<ReflectionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +46,7 @@ export default function ReflectionPage() {
     setSelectedTrade(trade);
     setLoading(true);
     setError(null);
+    setResult(null);
 
     try {
       const response = await fetch("/api/reflection", {
@@ -76,172 +77,178 @@ export default function ReflectionPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <div className="rounded-[28px] border border-white/10 bg-[var(--panel)] p-6 shadow-2xl shadow-slate-950/30 backdrop-blur">
-          <p className="text-sm uppercase tracking-[0.28em] text-cyan-200/80">
-            Reflection Center
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="mb-8 text-3xl font-bold text-gray-900 dark:text-white">
+          AI 交易复盘
+        </h1>
+
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            💡 点击交易记录右侧的「AI 复盘」按钮，系统会分析该笔交易的决策依据、市场状态和可复用经验。
           </p>
-          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-white md:text-4xl">
-                AI 自动复盘
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                选择一笔交易，系统会调用 Claude 生成结构化交易复盘，帮助你复核判断逻辑与策略偏差。
-              </p>
-            </div>
+        </div>
+
+        <div className="mb-6 overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+          <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              近期交易
+            </h2>
+          </div>
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {mockTrades.map((trade) => (
+              <div
+                key={trade.id}
+                className="px-6 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              >
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex-1">
+                    <div className="mb-2 flex items-center gap-3">
+                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {trade.symbol}
+                      </span>
+                      <span
+                        className={`rounded px-2 py-1 text-xs font-medium ${
+                          trade.side === "buy"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
+                      >
+                        {trade.side === "buy" ? "买入" : "卖出"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400 md:grid-cols-4">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-500">价格：</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          ${trade.price.toLocaleString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-500">数量：</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {trade.quantity}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-500">策略：</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {trade.strategy}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-500">盈亏：</span>
+                        <span
+                          className={`font-medium ${
+                            (trade.pnl ?? 0) >= 0
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {trade.pnl !== undefined
+                            ? `$${trade.pnl > 0 ? "+" : ""}${trade.pnl}`
+                            : "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleReflect(trade)}
+                    disabled={loading && selectedTrade?.id === trade.id}
+                    className="ml-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-blue-400 md:ml-4"
+                  >
+                    {loading && selectedTrade?.id === trade.id ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        分析中...
+                      </span>
+                    ) : (
+                      "AI 复盘"
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <section className="rounded-[28px] border border-white/10 bg-[var(--panel)] p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">交易列表</h2>
-              <span className="text-xs text-slate-400">{mockTrades.length} trades</span>
+        {error ? (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+            <p className="text-sm text-red-800 dark:text-red-200">❌ {error}</p>
+          </div>
+        ) : null}
+
+        {result ? (
+          <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+            <div className="border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 px-6 py-4 dark:border-gray-700 dark:from-purple-900/20 dark:to-blue-900/20">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+                <span className="text-2xl">🤖</span>
+                AI 复盘分析
+                <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+                  {selectedTrade?.symbol} - {selectedTrade?.side === "buy" ? "买入" : "卖出"}
+                </span>
+              </h2>
             </div>
-
-            <div className="space-y-3">
-              {mockTrades.map((trade) => {
-                const active = trade.id === selectedTrade?.id;
-                const pnlPositive = (trade.pnl ?? 0) >= 0;
-
-                return (
-                  <button
-                    key={trade.id}
-                    type="button"
-                    onClick={() => handleReflect(trade)}
-                    className={`w-full rounded-2xl border p-4 text-left transition ${
-                      active
-                        ? "border-cyan-300/60 bg-cyan-400/10"
-                        : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-white">{trade.symbol}</p>
-                        <p className="mt-1 text-sm text-slate-400">{trade.strategy}</p>
-                      </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          trade.side === "buy"
-                            ? "bg-emerald-400/15 text-emerald-200"
-                            : "bg-rose-400/15 text-rose-200"
-                        }`}
-                      >
-                        {trade.side.toUpperCase()}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-4">
-                      <div>
-                        <p className="text-xs text-slate-500">Price</p>
-                        <p>{trade.price}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Qty</p>
-                        <p>{trade.quantity}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">PnL</p>
-                        <p className={pnlPositive ? "text-emerald-300" : "text-rose-300"}>
-                          {trade.pnl}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Time</p>
-                        <p>{new Date(trade.timestamp).toLocaleString("zh-CN")}</p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-white/10 bg-[var(--panel)] p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-4">
+            <div className="space-y-6 p-6">
               <div>
-                <h2 className="text-lg font-semibold text-white">复盘结果</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {selectedTrade ? `当前交易：${selectedTrade.symbol}` : "请选择一笔交易"}
+                <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  📊 交易分析
+                </h3>
+                <p className="whitespace-pre-wrap leading-relaxed text-gray-900 dark:text-white">
+                  {result.analysis}
                 </p>
               </div>
-              {loading ? (
-                <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-medium text-cyan-100">
-                  Claude 正在分析...
-                </span>
-              ) : null}
-            </div>
 
-            <div className="mt-6 min-h-[420px] rounded-[24px] border border-white/10 bg-[var(--panel-strong)] p-5">
-              {error ? (
-                <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-100">
-                  {error}
-                </div>
-              ) : null}
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  💡 关键学习点
+                </h3>
+                {result.keyLearnings.length > 0 ? (
+                  <ul className="space-y-2">
+                    {result.keyLearnings.map((learning) => (
+                      <li
+                        key={learning}
+                        className="flex items-start gap-2 text-gray-900 dark:text-white"
+                      >
+                        <span className="mt-1 text-blue-500">•</span>
+                        <span>{learning}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">暂无关键学习点。</p>
+                )}
+              </div>
 
-              {!error && !result && !loading ? (
-                <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-slate-400">
-                  点击左侧交易卡片，生成 AI 自动复盘。
-                </div>
-              ) : null}
-
-              {loading ? (
-                <div className="space-y-4">
-                  <div className="h-5 w-2/5 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-4 w-full animate-pulse rounded-full bg-white/8" />
-                  <div className="h-4 w-11/12 animate-pulse rounded-full bg-white/8" />
-                  <div className="h-4 w-10/12 animate-pulse rounded-full bg-white/8" />
-                  <div className="mt-8 h-4 w-1/3 animate-pulse rounded-full bg-white/8" />
-                  <div className="h-4 w-4/5 animate-pulse rounded-full bg-white/8" />
-                  <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/8" />
-                </div>
-              ) : null}
-
-              {!loading && result ? (
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/80">
-                      Analysis
-                    </p>
-                    <article className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-100">
-                      {result.analysis}
-                    </article>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/80">
-                      Key Learnings
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {result.keyLearnings.map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-50"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {result.suggestedStrategy ? (
-                    <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.24em] text-emerald-100/80">
-                        Suggested Strategy
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-emerald-50">
-                        {result.suggestedStrategy}
-                      </p>
-                    </div>
-                  ) : null}
+              {result.suggestedStrategy ? (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    🎯 策略建议
+                  </h3>
+                  <p className="rounded-lg bg-yellow-50 p-3 text-gray-900 dark:bg-yellow-900/20 dark:text-white">
+                    {result.suggestedStrategy}
+                  </p>
                 </div>
               ) : null}
             </div>
-          </section>
-        </div>
-      </section>
-    </main>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
